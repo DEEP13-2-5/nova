@@ -226,10 +226,23 @@ export function Editor({ tab }: EditorProps) {
 
   // ── Reload file when external process modifies it (e.g. Claude edits) ───────
   const tabPathRef2 = useRef(tab.path);
+  const tabDirtyRef = useRef(tab.dirty);
   useEffect(() => { tabPathRef2.current = tab.path; }, [tab.path]);
+  useEffect(() => { tabDirtyRef.current = tab.dirty; }, [tab.dirty]);
 
   const reloadFromDisk = useCallback(async (changedPath: string) => {
     if (changedPath !== tabPathRef2.current) return;
+    
+    // If buffer is dirty (has unsaved changes), ask user before overwriting
+    if (tabDirtyRef.current) {
+      const shouldReload = window.confirm(
+        `The file "${tab.name}" has been changed on disk.\n\n` +
+        `You have unsaved changes in the editor.\n\n` +
+        `Reload the file from disk? (Your unsaved changes will be lost.)`
+      );
+      if (!shouldReload) return; // User chose to keep unsaved changes
+    }
+
     try {
       const content = await invoke<string>("read_file", { path: changedPath });
       tabContentMap.set(changedPath, content);
@@ -239,8 +252,10 @@ export function Editor({ tab }: EditorProps) {
           changes: { from: 0, to: view.state.doc.length, insert: content },
         });
       }
-    } catch { /* file may be temporarily unavailable during write */ }
-  }, []);
+    } catch (e) { 
+      console.warn(`Failed to reload file from disk: ${e}`);
+    }
+  }, [tab.name]);
 
   useEffect(() => {
     const handler = (e: Event) => reloadFromDisk((e as CustomEvent<string>).detail);
