@@ -252,6 +252,8 @@ export function Editor({ tab }: EditorProps) {
           changes: { from: 0, to: view.state.doc.length, insert: content },
         });
       }
+      // Mark the file as clean after external reload (don't mark as dirty from reload)
+      saveTabRef.current(changedPath, { silent: true });
     } catch (e) { 
       console.warn(`Failed to reload file from disk: ${e}`);
     }
