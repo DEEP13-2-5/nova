@@ -126,22 +126,25 @@ export function Editor({ tab }: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef      = useRef<EditorView | null>(null);
 
-  const markDirty  = useStore((s) => s.markDirty);
-  const saveTab    = useStore((s) => s.saveTab);
-  const setVimMode = useStore((s) => s.setVimMode);
-  const s          = useStore((s) => s.settings.editor);
+  const markDirty    = useStore((s) => s.markDirty);
+  const saveTab      = useStore((s) => s.saveTab);
+  const clearTabDirty = useStore((s) => s.clearTabDirty);
+  const setVimMode   = useStore((s) => s.setVimMode);
+  const s            = useStore((s) => s.settings.editor);
 
   // Stable refs — listeners registered once always call the latest callback
-  const markDirtyRef  = useRef(markDirty);
-  const saveTabRef    = useRef(saveTab);
-  const setVimModeRef = useRef(setVimMode);
-  const tabPathRef    = useRef(tab.path);
-  const tabLangRef    = useRef(tab.language);
-  useEffect(() => { markDirtyRef.current  = markDirty;    }, [markDirty]);
-  useEffect(() => { saveTabRef.current    = saveTab;      }, [saveTab]);
-  useEffect(() => { setVimModeRef.current = setVimMode;   }, [setVimMode]);
-  useEffect(() => { tabPathRef.current    = tab.path;     }, [tab.path]);
-  useEffect(() => { tabLangRef.current    = tab.language; }, [tab.language]);
+  const markDirtyRef    = useRef(markDirty);
+  const saveTabRef      = useRef(saveTab);
+  const clearTabDirtyRef = useRef(clearTabDirty);
+  const setVimModeRef   = useRef(setVimMode);
+  const tabPathRef      = useRef(tab.path);
+  const tabLangRef      = useRef(tab.language);
+  useEffect(() => { markDirtyRef.current    = markDirty;    }, [markDirty]);
+  useEffect(() => { saveTabRef.current      = saveTab;      }, [saveTab]);
+  useEffect(() => { clearTabDirtyRef.current = clearTabDirty; }, [clearTabDirty]);
+  useEffect(() => { setVimModeRef.current   = setVimMode;   }, [setVimMode]);
+  useEffect(() => { tabPathRef.current      = tab.path;     }, [tab.path]);
+  useEffect(() => { tabLangRef.current      = tab.language; }, [tab.language]);
 
 
   // ── Create/destroy the view — ONLY when switching files ──────────────────
@@ -252,8 +255,8 @@ export function Editor({ tab }: EditorProps) {
           changes: { from: 0, to: view.state.doc.length, insert: content },
         });
       }
-      // Mark the file as clean after external reload (don't mark as dirty from reload)
-      saveTabRef.current(changedPath, { silent: true });
+      // Mark clean without writing to disk (state-only, avoids race conditions)
+      clearTabDirtyRef.current(changedPath);
     } catch (e) { 
       console.warn(`Failed to reload file from disk: ${e}`);
     }
